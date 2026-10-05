@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operation Baby Reveal</title>
+<style>
+  * { box-sizing: border-box; }
+  :root {
+    --ink: #172033;
+    --muted: #667085;
+    --pink: #ff6fae;
+    --blue: #5b8def;
+    --cream: #fffaf4;
+  }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(circle at 15% 15%, #ffd6e8 0 9%, transparent 25%),
+      radial-gradient(circle at 85% 20%, #cfe0ff 0 10%, transparent 25%),
+      linear-gradient(135deg, #fff7fb, #f5f8ff 55%, #fffaf2);
+    overflow-x: hidden;
+  }
+  .floaters { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+  .balloon {
+    position: absolute;
+    width: 38px; height: 48px;
+    border-radius: 50% 50% 45% 45%;
+    opacity: .42;
+    animation: drift 7s ease-in-out infinite;
+  }
+  .balloon::after {
+    content: "";
+    position: absolute;
+    width: 1px; height: 75px;
+    background: #888;
+    left: 50%; top: 46px;
+  }
+  .b1 { left: 5%; top: 15%; background:#ff8fbd; }
+  .b2 { right: 7%; top: 12%; background:#7ea6ff; animation-delay: -2s; }
+  .b3 { left: 13%; bottom: 8%; background:#ffd166; animation-delay: -4s; }
+  .b4 { right: 15%; bottom: 10%; background:#9be7c4; animation-delay: -1s; }
+
+  .wrap {
+    width: min(720px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 52px 0;
+    text-align: center;
+  }
+  .badge {
+    display: inline-block;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.75);
+    border: 1px solid rgba(23,32,51,.08);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  h1 {
+    font-size: clamp(40px, 9vw, 76px);
+    line-height: .95;
+    margin: 20px 0 14px;
+    letter-spacing: -0.055em;
+  }
+  .sub { color: var(--muted); font-size: 18px; margin: 0 auto 28px; max-width: 560px; }
+  .card {
+    position: relative;
+    background: rgba(255,255,255,.86);
+    border: 1px solid rgba(23,32,51,.08);
+    border-radius: 30px;
+    padding: clamp(26px, 6vw, 48px);
+    box-shadow: 0 22px 70px rgba(34,44,74,.12);
+    backdrop-filter: blur(12px);
+  }
+  .screen { display:none; }
+  .screen.active { display:block; animation: pop .5s ease both; }
+  .emoji { font-size: 64px; margin-bottom: 12px; }
+  .prompt { font-size: 25px; font-weight: 850; margin: 0 0 10px; }
+  .small { color: var(--muted); line-height: 1.5; }
+  button {
+    border: 0;
+    min-height: 54px;
+    padding: 0 25px;
+    border-radius: 16px;
+    font: inherit;
+    font-weight: 850;
+    cursor: pointer;
+    background: var(--ink);
+    color: white;
+    box-shadow: 0 10px 24px rgba(23,32,51,.18);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  button:hover { transform: translateY(-2px); box-shadow: 0 14px 28px rgba(23,32,51,.22); }
+  button:active { transform: translateY(1px); }
+  .choice-row { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:22px; }
+  .choice {
+    background:#fff;
+    color:var(--ink);
+    border:2px solid #e6e9ef;
+    box-shadow:none;
+  }
+  .choice:hover { border-color:#aab3c4; }
+  .meter {
+    height: 12px;
+    background:#edf0f5;
+    border-radius:99px;
+    overflow:hidden;
+    margin:22px 0 10px;
+  }
+  .meter > div {
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,var(--pink),var(--blue));
+    border-radius:inherit;
+    transition:width .2s ease;
+  }
+  .status { font-size:14px; font-weight:700; color:var(--muted); }
+  .count {
+    font-size: clamp(100px, 25vw, 190px);
+    font-weight: 950;
+    line-height: .8;
+    letter-spacing:-.08em;
+    margin: 35px 0;
+    background: linear-gradient(135deg,#ff6fae,#5b8def);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+    animation: pulse .9s ease-in-out infinite;
+  }
+  .reveal-word {
+    font-size: clamp(58px, 13vw, 120px);
+    line-height:.9;
+    font-weight:1000;
+    letter-spacing:-.07em;
+    margin:18px 0;
+  }
+  .boy { color:#4e80ed; }
+  .girl { color:#f15f9c; }
+  .reveal-sub { font-size:23px; font-weight:750; }
+  .confetti {
+    position:fixed;
+    top:-20px;
+    width:10px;height:16px;
+    z-index:20;
+    animation: fall linear forwards;
+  }
+  .again { margin-top:25px; background:transparent; color:var(--muted); box-shadow:none; }
+  @keyframes pop { from{opacity:0;transform:translateY(12px) scale(.98)} to{opacity:1;transform:none} }
+  @keyframes pulse { 50%{transform:scale(1.08)} }
+  @keyframes drift { 50%{transform:translateY(-18px) rotate(4deg)} }
+  @keyframes fall { to{transform:translate3d(var(--x),110vh,0) rotate(720deg)} }
+  @media (prefers-reduced-motion: reduce) {
+    *,*::before,*::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; }
+  }
+</style>
+</head>
+<body>
+<div class="floaters" aria-hidden="true">
+  <div class="balloon b1"></div><div class="balloon b2"></div>
+  <div class="balloon b3"></div><div class="balloon b4"></div>
+</div>
+
+<main class="wrap">
+  <span class="badge">🔐 classified baby mission</span>
+  <h1>Operation<br>Baby Reveal</h1>
+  <p class="sub">You have been granted access to one extremely important mission. Complete the tiny challenge to unlock the answer.</p>
+
+  <section class="card">
+    <div id="start" class="screen active">
+      <div class="emoji">🕵️‍♀️🕵️‍♂️</div>
+      <p class="prompt">Ready, detective?</p>
+      <p class="small">There is only one rule: no cheating, no asking the parents, and absolutely no jumping to the ending.</p>
+      <button id="startBtn">BEGIN THE MISSION →</button>
+    </div>
+
+    <div id="game" class="screen">
+      <div class="emoji">👶🔮</div>
+      <p class="prompt">Tiny Hurdle #1</p>
+      <p class="small">The baby has sent you a prediction. Pick the answer you think the baby is hiding.</p>
+      <div class="choice-row">
+        <button class="choice" data-answer="boy">💙 Team Boy</button>
+        <button class="choice" data-answer="girl">💗 Team Girl</button>
+      </div>
+      <div class="meter"><div id="meter"></div></div>
+      <div class="status" id="status">Make your prediction to unlock the countdown.</div>
+    </div>
+
+    <div id="countdown" class="screen">
+      <div class="emoji">🚨</div>
+      <p class="prompt">Prediction locked.</p>
+      <p class="small">The envelope is opening...</p>
+      <div class="count" id="count">5</div>
+      <div class="status">DO NOT LOOK AWAY.</div>
+    </div>
+
+    <div id="reveal" class="screen">
+      <div class="emoji" id="revealEmoji">🎉👶🎉</div>
+      <p class="prompt">MISSION COMPLETE</p>
+      <div class="reveal-word" id="revealWord">IT'S A BOY!</div>
+      <p class="reveal-sub" id="revealSub">The newest little legend is on the way. 💙</p>
+      <button class="again" id="againBtn">↻ Play again</button>
+    </div>
+  </section>
+</main>
+
+<script>
+  // ============================================================
+  // CHANGE THIS ONE VALUE BEFORE PUBLISHING:
+  // "boy"  or  "girl"
+  // ============================================================
+  const SECRET = "boy";
+
+  const screens = {
+    start: document.getElementById("start"),
+    game: document.getElementById("game"),
+    countdown: document.getElementById("countdown"),
+    reveal: document.getElementById("reveal")
+  };
+  const meter = document.getElementById("meter");
+  const status = document.getElementById("status");
+  const count = document.getElementById("count");
+  const revealWord = document.getElementById("revealWord");
+  const revealSub = document.getElementById("revealSub");
+  let timer = null;
+
+  function show(name) {
+    Object.values(screens).forEach(s => s.classList.remove("active"));
+    screens[name].classList.add("active");
+  }
+
+  function confetti() {
+    const pieces = ["#ff6fae","#5b8def","#ffd166","#7bdcb5","#b28dff","#ff9f68"];
+    for (let i = 0; i < 110; i++) {
+      const el = document.createElement("i");
+      el.className = "confetti";
+      el.style.left = Math.random() * 100 + "vw";
+      el.style.background = pieces[Math.floor(Math.random() * pieces.length)];
+      el.style.setProperty("--x", (Math.random() * 260 - 130) + "px");
+      el.style.animationDuration = (2.2 + Math.random() * 2.5) + "s";
+      el.style.animationDelay = Math.random() * .45 + "s";
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 5200);
+    }
+  }
+
+  function reveal() {
+    const isBoy = SECRET === "boy";
+    revealWord.textContent = isBoy ? "IT'S A BOY!" : "IT'S A GIRL!";
+    revealWord.className = "reveal-word " + (isBoy ? "boy" : "girl");
+    revealSub.textContent = isBoy
+      ? "The newest little legend is on the way. 💙"
+      : "The newest little superstar is on the way. 💗";
+    document.getElementById("revealEmoji").textContent = isBoy ? "🎉👶💙🎉" : "🎉👶💗🎉";
+    show("reveal");
+    confetti();
+  }
+
+  document.getElementById("startBtn").addEventListener("click", () => show("game"));
+
+  document.querySelectorAll(".choice").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".choice").forEach(b => b.disabled = true);
+      const guess = btn.dataset.answer;
+      let progress = 0;
+      status.textContent = guess === SECRET
+        ? "Interesting... your instincts may be onto something. 🔎"
+        : "Bold prediction. The baby refuses to comment. 😏";
+      const interval = setInterval(() => {
+        progress += 10;
+        meter.style.width = progress + "%";
+        if (progress >= 100) {
+          clearInterval(interval);
+          setTimeout(startCountdown, 350);
+        }
+      }, 55);
+    });
+  });
+
+  function startCountdown() {
+    show("countdown");
+    let n = 5;
+    count.textContent = n;
+    timer = setInterval(() => {
+      n--;
+      if (n > 0) {
+        count.textContent = n;
+      } else {
+        clearInterval(timer);
+        timer = null;
+        setTimeout(reveal, 300);
+      }
+    }, 1000);
+  }
+
+  document.getElementById("againBtn").addEventListener("click", () => {
+    meter.style.width = "0%";
+    status.textContent = "Make your prediction to unlock the countdown.";
+    document.querySelectorAll(".choice").forEach(b => b.disabled = false);
+    show("game");
+  });
+</script>
+</body>
+</html>
